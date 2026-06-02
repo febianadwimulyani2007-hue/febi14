@@ -1,0 +1,2246 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroAnt AI - Simulator Neuroevolusi Semut Interaktif</title>
+    
+    <!-- Google Fonts: Outfit -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-dark: #08090c;
+            --card-bg: rgba(17, 20, 28, 0.7);
+            --card-border: rgba(255, 255, 255, 0.07);
+            
+            --accent-cyan: #00f0ff;
+            --accent-green: #00ff88;
+            --accent-magenta: #ff007f;
+            --accent-yellow: #ffdd57;
+            
+            --text-main: #f0f2f5;
+            --text-muted: #8a99ad;
+            --font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: var(--font-family);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+
+        /* SIMULATION CONTAINER (LEFT) */
+        #simulation-container {
+            flex: 1;
+            height: 100%;
+            position: relative;
+            background: radial-gradient(circle at center, #11141d 0%, #08090c 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #world-canvas {
+            display: block;
+            background: transparent;
+            cursor: crosshair;
+        }
+
+        /* WATERMARK / FLOATING TITLE */
+        .world-watermark {
+            position: absolute;
+            top: 25px;
+            left: 30px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .world-watermark h1 {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(0, 240, 255, 0.2);
+            text-transform: uppercase;
+        }
+
+        .world-watermark p {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 400;
+            margin-top: 4px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* DASHBOARD SIDEBAR (RIGHT) */
+        #dashboard {
+            width: 420px;
+            height: 100%;
+            background: rgba(10, 11, 16, 0.85);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid var(--card-border);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            z-index: 20;
+            box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Custom Scrollbar for Dashboard */
+        #dashboard::-webkit-scrollbar {
+            width: 6px;
+        }
+        #dashboard::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #dashboard::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+        #dashboard::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .dashboard-header {
+            padding: 25px 25px 15px 25px;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .version-badge {
+            background: rgba(0, 240, 255, 0.1);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            color: var(--accent-cyan);
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 20px;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .dashboard-content {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* GLASS CARD STYLING */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            transition: border-color 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-main);
+            border-left: 3px solid var(--accent-cyan);
+            padding-left: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-subtitle {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        /* GRID SYSTEM FOR QUICK STATS */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .stat-value.cyan { color: var(--accent-cyan); text-shadow: 0 0 10px rgba(0,240,255,0.2); }
+        .stat-value.green { color: var(--accent-green); text-shadow: 0 0 10px rgba(0,255,136,0.2); }
+        .stat-value.magenta { color: var(--accent-magenta); text-shadow: 0 0 10px rgba(255,0,127,0.2); }
+
+        /* BUTTON GROUP STYLES */
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+        }
+
+        button {
+            font-family: var(--font-family);
+            font-weight: 600;
+            font-size: 12px;
+            padding: 10px 16px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            flex: 1;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        button.primary {
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(0, 114, 255, 0.2));
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.15);
+        }
+
+        button.primary:hover {
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.35), rgba(0, 114, 255, 0.35));
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.3);
+            color: #fff;
+        }
+
+        button.danger {
+            background: rgba(255, 0, 127, 0.1);
+            border-color: rgba(255, 0, 127, 0.3);
+            color: #ff3388;
+        }
+
+        button.danger:hover {
+            background: rgba(255, 0, 127, 0.25);
+            border-color: var(--accent-magenta);
+            color: #fff;
+        }
+
+        button.active-mode {
+            background: var(--accent-cyan) !important;
+            color: #000 !important;
+            border-color: var(--accent-cyan) !important;
+            font-weight: 700;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+        }
+
+        /* SLIDER CUSTOMIZATION */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            width: 100%;
+        }
+
+        .control-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .control-value {
+            font-weight: 600;
+            color: var(--accent-cyan);
+        }
+
+        .slider-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.08);
+            outline: none;
+            transition: background 0.3s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            border: 2px solid var(--bg-dark);
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--accent-cyan);
+            transition: transform 0.1s, box-shadow 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 18px var(--accent-cyan);
+        }
+
+        /* SELECT / DROPDOWN */
+        select {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 10px;
+            color: var(--text-main);
+            font-family: var(--font-family);
+            font-size: 12px;
+            font-weight: 500;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        select:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        select option {
+            background: #11141d;
+            color: var(--text-main);
+        }
+
+        /* CANVAS VISUALIZERS IN CARD */
+        .visualizer-canvas {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            display: block;
+            width: 100%;
+            height: 220px;
+        }
+
+        /* DYNAMIC PRESETS SECTION */
+        .preset-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .preset-btn {
+            font-size: 10px;
+            padding: 8px 4px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        /* BOTTOM BANNER INFO */
+        .info-footer {
+            padding: 20px 25px 30px 25px;
+            text-align: center;
+            font-size: 11px;
+            color: var(--text-muted);
+            line-height: 1.6;
+            border-top: 1px solid var(--card-border);
+        }
+
+        .info-footer a {
+            color: var(--accent-cyan);
+            text-decoration: none;
+        }
+
+        /* IN-WORLD HOTKEY BAR */
+        .hotkeys-bar {
+            position: absolute;
+            bottom: 25px;
+            left: 30px;
+            background: rgba(17, 20, 28, 0.65);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--card-border);
+            padding: 10px 20px;
+            border-radius: 30px;
+            display: flex;
+            gap: 20px;
+            z-index: 10;
+            pointer-events: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .hotkey-item {
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+        }
+
+        .hotkey-key {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 700;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 2px 0 rgba(0,0,0,0.5);
+        }
+
+        /* DYNAMIC BRUSH INDICATOR */
+        #brush-indicator {
+            position: absolute;
+            border: 2px dashed var(--accent-magenta);
+            border-radius: 50%;
+            pointer-events: none;
+            display: none;
+            z-index: 5;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px rgba(255, 0, 127, 0.2);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- CONTAINER SIMULASI (KIRI) -->
+    <div id="simulation-container">
+        <div class="world-watermark">
+            <h1>NeuroAnt AI</h1>
+            <p>Sistem Pelatihan Jaringan Saraf & Algoritma Genetika Mandiri</p>
+        </div>
+
+        <canvas id="world-canvas"></canvas>
+        <div id="brush-indicator"></div>
+
+        <div class="hotkeys-bar">
+            <div class="hotkey-item">
+                <span class="hotkey-key">Drag Mouse</span> Gambar Rintangan
+            </div>
+            <div class="hotkey-item">
+                <span class="hotkey-key">Drag Target</span> Pindahkan Target
+            </div>
+            <div class="hotkey-item">
+                <span class="hotkey-key">Klik Kanan</span> Hapus Rintangan
+            </div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD PANEL (KANAN) -->
+    <div id="dashboard">
+        <div class="dashboard-header">
+            <span class="version-badge">BETA v2.0 - HTML5 PURE</span>
+            <h2 style="font-weight: 800; font-size: 22px; letter-spacing: 0.5px;">Control Panel</h2>
+            <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Pantau & Kendalikan Evolusi Semut</p>
+        </div>
+
+        <div class="dashboard-content">
+            
+            <!-- PANEL KONTROL SIMULASI -->
+            <div class="card">
+                <div class="card-title">Kontrol Simulasi</div>
+                
+                <div class="btn-group">
+                    <button id="btn-play-pause" class="primary">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                        <span>Pause</span>
+                    </button>
+                    <button id="btn-reset" class="danger">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+                        <span>Reset</span>
+                    </button>
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>Kecepatan Simulasi</span>
+                        <span class="control-value" id="speed-val">1x (Normal)</span>
+                    </div>
+                    <div class="slider-wrapper">
+                        <input type="range" id="slider-speed" min="1" max="10" value="1">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>Mode Mouse</span>
+                    </div>
+                    <div class="btn-group">
+                        <button id="btn-mode-draw" class="active-mode">Draw</button>
+                        <button id="btn-mode-erase">Erase</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>Ukuran Kuas</span>
+                        <span class="control-value" id="brush-val">20px</span>
+                    </div>
+                    <div class="slider-wrapper">
+                        <input type="range" id="slider-brush" min="10" max="60" value="20">
+                    </div>
+                </div>
+            </div>
+
+            <!-- PANEL STATISTIK REAL-TIME -->
+            <div class="card">
+                <div class="card-title">Statistik Populasi</div>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <span class="stat-label">Generasi</span>
+                        <span class="stat-value cyan" id="stat-gen">1</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Waktu Frame</span>
+                        <span class="stat-value" id="stat-frame">0 / 500</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Terbaik Saat Ini</span>
+                        <span class="stat-value green" id="stat-best-fit">0.0000</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Sukses Rate</span>
+                        <span class="stat-value magenta" id="stat-success">0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PANEL PRESET DUNIA -->
+            <div class="card">
+                <div class="card-title">Preset Rintangan</div>
+                <div class="preset-grid">
+                    <button class="preset-btn" onclick="setPreset('empty')">Kosong</button>
+                    <button class="preset-btn" onclick="setPreset('wall')">Tembok</button>
+                    <button class="preset-btn" onclick="setPreset('gate')">Pintu Ganda</button>
+                    <button class="preset-btn" onclick="setPreset('maze')">Labirin S</button>
+                    <button class="preset-btn" onclick="setPreset('dynamic')" style="border-color: var(--accent-magenta);">Rintangan Bergerak</button>
+                    <button class="preset-btn danger" onclick="clearObstacles()">Bersihkan</button>
+                </div>
+            </div>
+
+            <!-- PANEL PENGATURAN PARAMETER EVOLUSI -->
+            <div class="card">
+                <div class="card-title">Parameter Evolusi</div>
+                
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>Ukuran Populasi</span>
+                        <span class="control-value" id="pop-val">150 Semut</span>
+                    </div>
+                    <div class="slider-wrapper">
+                        <input type="range" id="slider-pop" min="50" max="300" step="10" value="150">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>Tingkat Mutasi (Rate)</span>
+                        <span class="control-value" id="mutate-val">15%</span>
+                    </div>
+                    <div class="slider-wrapper">
+                        <input type="range" id="slider-mutate" min="1" max="50" value="15">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span>Panjang Sensor Lidar</span>
+                        <span class="control-value" id="sensor-val">150px</span>
+                    </div>
+                    <div class="slider-wrapper">
+                        <input type="range" id="slider-sensor" min="60" max="250" value="150">
+                    </div>
+                </div>
+            </div>
+
+            <!-- PANEL DIAGRAM JARINGAN SARAF TIRUAN (BEST ANT) -->
+            <div class="card">
+                <div class="card-title">
+                    <span>Diagram Saraf Aktif</span>
+                    <span class="card-subtitle">Semut Terbaik</span>
+                </div>
+                <canvas id="brain-canvas" class="visualizer-canvas"></canvas>
+            </div>
+
+            <!-- PANEL GRAFIK TREN KEMAJUAN -->
+            <div class="card">
+                <div class="card-title">
+                    <span>Grafik Tren Kemajuan</span>
+                    <span class="card-subtitle">Per Generasi</span>
+                </div>
+                <canvas id="chart-canvas" class="visualizer-canvas"></canvas>
+            </div>
+
+        </div>
+
+        <div class="info-footer">
+            Dibuat menggunakan HTML5 & Vanilla JS<br>
+            © 2026 NeuroAnt AI. Semua Hak Cipta Dilindungi.
+        </div>
+    </div>
+
+    <!-- LOGIKA UTAMA SIMULASI (JAVASCRIPT) -->
+    <script>
+        // Set canvas resolution
+        const worldCanvas = document.getElementById("world-canvas");
+        const ctx = worldCanvas.getContext("2d");
+
+        // Fit simulation to screen container
+        const simContainer = document.getElementById("simulation-container");
+        function resizeCanvas() {
+            worldCanvas.width = simContainer.clientWidth;
+            worldCanvas.height = simContainer.clientHeight;
+        }
+        resizeCanvas();
+
+        const brainCanvas = document.getElementById("brain-canvas");
+        const brainCtx = brainCanvas.getContext("2d");
+        brainCanvas.width = 380;
+        brainCanvas.height = 220;
+
+        const chartCanvas = document.getElementById("chart-canvas");
+        const chartCtx = chartCanvas.getContext("2d");
+        chartCanvas.width = 380;
+        chartCanvas.height = 220;
+
+        //////////////////////////////////////////////////
+        // GLOBAL SETTINGS & SIMULATION PARAMETERS
+        //////////////////////////////////////////////////
+        let config = {
+            populationSize: 150,
+            lifetime: 500,
+            mutationRate: 0.15,
+            sensorRange: 150,
+            speedMultiplier: 1
+        };
+
+        let generation = 1;
+        let frameCount = 0;
+        let isPaused = false;
+        let mouseMode = 'draw'; // 'draw' or 'erase'
+        let brushSize = 20;
+
+        let ants = [];
+        let obstacles = [];
+        let target = { x: 0, y: 0, r: 22 };
+        let startPoint = { x: 100, y: 0 }; // Akan disesuaikan saat resize
+
+        // Initial target and start locations
+        function resetPositions() {
+            startPoint.x = 100;
+            startPoint.y = worldCanvas.height / 2;
+            
+            target.x = worldCanvas.width - 120;
+            target.y = worldCanvas.height / 2;
+        }
+        resetPositions();
+
+        // History logs for graphing
+        let history = []; 
+        // Format: { generation, bestFitness, avgFitness, successRate }
+
+        //////////////////////////////////////////////////
+        // GAUSSIAN RANDOM HELPER (Box-Muller Transform)
+        //////////////////////////////////////////////////
+        function randomGaussian(mean = 0, stdDev = 1) {
+            let u1 = Math.random();
+            let u2 = Math.random();
+            // Prevent log of 0
+            if (u1 === 0) u1 = 0.0001;
+            let randStdNormal = Math.sqrt(-2.0 * Math.log(u1)) * Math.sin(2.0 * Math.PI * u2);
+            return mean + stdDev * randStdNormal;
+        }
+
+        //////////////////////////////////////////////////
+        // NEURAL NETWORK CLASS
+        //////////////////////////////////////////////////
+        class NeuralNetwork {
+            constructor(layerSizes = [8, 8, 2]) {
+                this.inputSize = layerSizes[0];
+                this.hiddenSize = layerSizes[1];
+                this.outputSize = layerSizes[2];
+
+                // Weights & Biases
+                // Input -> Hidden
+                this.weightsIH = [];
+                for (let i = 0; i < this.hiddenSize; i++) {
+                    let row = [];
+                    for (let j = 0; j < this.inputSize; j++) {
+                        row.push(Math.random() * 2 - 1);
+                    }
+                    this.weightsIH.push(row);
+                }
+                this.biasH = [];
+                for (let i = 0; i < this.hiddenSize; i++) {
+                    this.biasH.push(Math.random() * 2 - 1);
+                }
+
+                // Hidden -> Output
+                this.weightsHO = [];
+                for (let i = 0; i < this.outputSize; i++) {
+                    let row = [];
+                    for (let j = 0; j < this.hiddenSize; j++) {
+                        row.push(Math.random() * 2 - 1);
+                    }
+                    this.weightsHO.push(row);
+                }
+                this.biasO = [];
+                for (let i = 0; i < this.outputSize; i++) {
+                    this.biasO.push(Math.random() * 2 - 1);
+                }
+            }
+
+            // Deep clone
+            clone() {
+                const nn = new NeuralNetwork([this.inputSize, this.hiddenSize, this.outputSize]);
+                
+                // Copy Weights IH
+                for (let i = 0; i < this.hiddenSize; i++) {
+                    nn.weightsIH[i] = [...this.weightsIH[i]];
+                }
+                nn.biasH = [...this.biasH];
+
+                // Copy Weights HO
+                for (let i = 0; i < this.outputSize; i++) {
+                    nn.weightsHO[i] = [...this.weightsHO[i]];
+                }
+                nn.biasO = [...this.biasO];
+
+                return nn;
+            }
+
+            // Mutate parameters using intelligent Gaussian
+            mutate(rate) {
+                // Input -> Hidden
+                for (let i = 0; i < this.hiddenSize; i++) {
+                    for (let j = 0; j < this.inputSize; j++) {
+                        if (Math.random() < rate) {
+                            this.weightsIH[i][j] += randomGaussian(0, 0.18);
+                            // Bound to -1, 1 to keep network stable
+                            this.weightsIH[i][j] = Math.max(-1, Math.min(1, this.weightsIH[i][j]));
+                        }
+                    }
+                    if (Math.random() < rate) {
+                        this.biasH[i] += randomGaussian(0, 0.18);
+                        this.biasH[i] = Math.max(-1, Math.min(1, this.biasH[i]));
+                    }
+                }
+
+                // Hidden -> Output
+                for (let i = 0; i < this.outputSize; i++) {
+                    for (let j = 0; j < this.hiddenSize; j++) {
+                        if (Math.random() < rate) {
+                            this.weightsHO[i][j] += randomGaussian(0, 0.18);
+                            this.weightsHO[i][j] = Math.max(-1, Math.min(1, this.weightsHO[i][j]));
+                        }
+                    }
+                    if (Math.random() < rate) {
+                        this.biasO[i] += randomGaussian(0, 0.18);
+                        this.biasO[i] = Math.max(-1, Math.min(1, this.biasO[i]));
+                    }
+                }
+            }
+
+            // Uniform Crossover
+            crossover(partner) {
+                const child = new NeuralNetwork([this.inputSize, this.hiddenSize, this.outputSize]);
+
+                // IH Weights
+                for (let i = 0; i < this.hiddenSize; i++) {
+                    for (let j = 0; j < this.inputSize; j++) {
+                        child.weightsIH[i][j] = Math.random() < 0.5 ? this.weightsIH[i][j] : partner.weightsIH[i][j];
+                    }
+                    child.biasH[i] = Math.random() < 0.5 ? this.biasH[i] : partner.biasH[i];
+                }
+
+                // HO Weights
+                for (let i = 0; i < this.outputSize; i++) {
+                    for (let j = 0; j < this.hiddenSize; j++) {
+                        child.weightsHO[i][j] = Math.random() < 0.5 ? this.weightsHO[i][j] : partner.weightsHO[i][j];
+                    }
+                    child.biasO[i] = Math.random() < 0.5 ? this.biasO[i] : partner.biasO[i];
+                }
+
+                return child;
+            }
+
+            // Forward feed
+            feedforward(inputs) {
+                // Input -> Hidden
+                let hidden = [];
+                for (let j = 0; j < this.hiddenSize; j++) {
+                    let sum = 0;
+                    for (let i = 0; i < this.inputSize; i++) {
+                        sum += inputs[i] * this.weightsIH[j][i];
+                    }
+                    sum += this.biasH[j];
+                    hidden.push(Math.tanh(sum)); // Activation range: [-1, 1]
+                }
+
+                // Hidden -> Output
+                let outputs = [];
+                for (let k = 0; k < this.outputSize; k++) {
+                    let sum = 0;
+                    for (let j = 0; j < this.hiddenSize; j++) {
+                        sum += hidden[j] * this.weightsHO[k][j];
+                    }
+                    sum += this.biasO[k];
+                    outputs.push(Math.tanh(sum));
+                }
+
+                return { inputs, hidden, outputs };
+            }
+        }
+
+        //////////////////////////////////////////////////
+        // OBSTACLE CLASS
+        //////////////////////////////////////////////////
+        class Obstacle {
+            constructor(x, y, r, isDynamic = false, vx = 0, vy = 0) {
+                this.x = x;
+                this.y = y;
+                this.r = r;
+                this.isDynamic = isDynamic;
+                this.vx = vx;
+                this.vy = vy;
+                
+                // Boundaries for dynamic bounce
+                this.minY = 50;
+                this.maxY = worldCanvas.height - 50;
+            }
+
+            update() {
+                if (this.isDynamic) {
+                    this.x += this.vx;
+                    this.y += this.vy;
+
+                    // Bounce off walls dynamically
+                    if (this.y - this.r < this.minY || this.y + this.r > this.maxY) {
+                        this.vy = -this.vy;
+                    }
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+                
+                // Premium glowing gradient
+                let grad = ctx.createRadialGradient(this.x, this.y, this.r * 0.2, this.x, this.y, this.r);
+                if (this.isDynamic) {
+                    grad.addColorStop(0, 'rgba(255, 0, 127, 0.4)');
+                    grad.addColorStop(1, 'rgba(255, 0, 127, 0.15)');
+                    ctx.strokeStyle = 'rgba(255, 0, 127, 0.6)';
+                    ctx.shadowColor = 'rgba(255, 0, 127, 0.4)';
+                } else {
+                    grad.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
+                    grad.addColorStop(1, 'rgba(255, 255, 255, 0.05)');
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+                }
+                
+                ctx.fillStyle = grad;
+                ctx.shadowBlur = 10;
+                ctx.fill();
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        //////////////////////////////////////////////////
+        // ANT AGENT CLASS
+        //////////////////////////////////////////////////
+        class Ant {
+            constructor(brain = null) {
+                this.x = startPoint.x;
+                this.y = startPoint.y;
+                this.vx = 0;
+                this.vy = 0;
+                this.angle = 0; // heading angle in radians
+                
+                this.r = 6; // visual size
+                this.maxSpeed = 4.5;
+                this.maxForce = 0.35;
+                
+                this.dead = false;
+                this.reached = false;
+                
+                this.timeSteps = 0;
+                this.minDistToTarget = Infinity;
+                
+                this.brain = brain || new NeuralNetwork([8, 8, 2]);
+                
+                // Cache for rendering the active brain
+                this.sensorValues = new Array(5).fill(0);
+                this.lidarPoints = new Array(5).fill(null);
+                this.lastHidden = new Array(8).fill(0);
+                this.lastOutputs = new Array(2).fill(0);
+
+                this.fitness = 0;
+            }
+
+            // Reset status for next generation while keeping the brain
+            reset() {
+                this.x = startPoint.x;
+                this.y = startPoint.y;
+                this.vx = 0;
+                this.vy = 0;
+                this.angle = 0;
+                this.dead = false;
+                this.reached = false;
+                this.timeSteps = 0;
+                this.minDistToTarget = Infinity;
+                this.fitness = 0;
+            }
+
+            // Core Raycasting Lidar
+            castSensors() {
+                const relativeAngles = [-Math.PI / 4, -Math.PI / 8, 0, Math.PI / 8, Math.PI / 4]; // -45, -22.5, 0, 22.5, 45 degrees
+                const range = config.sensorRange;
+
+                for (let i = 0; i < relativeAngles.length; i++) {
+                    const rayAngle = this.angle + relativeAngles[i];
+                    const dirX = Math.cos(rayAngle);
+                    const dirY = Math.sin(rayAngle);
+
+                    let closestIntersection = range;
+                    let hitPoint = { x: this.x + dirX * range, y: this.y + dirY * range };
+
+                    // 1. Check intersection with circular obstacles
+                    for (const obs of obstacles) {
+                        // Vector from Ray Start to Circle Center
+                        const vx = this.x - obs.x;
+                        const vy = this.y - obs.y;
+                        
+                        const b = dirX * vx + dirY * vy;
+                        const c = (vx * vx + vy * vy) - obs.r * obs.r;
+                        const disc = b * b - c;
+
+                        if (disc >= 0) {
+                            const t1 = -b - Math.sqrt(disc);
+                            const t2 = -b + Math.sqrt(disc);
+
+                            if (t1 >= 0 && t1 < closestIntersection) {
+                                closestIntersection = t1;
+                            }
+                            if (t2 >= 0 && t2 < closestIntersection) {
+                                closestIntersection = t2;
+                            }
+                        }
+                    }
+
+                    // 2. Check intersection with world boundaries
+                    const borderT = [
+                        dirX < 0 ? -this.x / dirX : Infinity, // Left wall
+                        dirX > 0 ? (worldCanvas.width - this.x) / dirX : Infinity, // Right wall
+                        dirY < 0 ? -this.y / dirY : Infinity, // Top wall
+                        dirY > 0 ? (worldCanvas.height - this.y) / dirY : Infinity // Bottom wall
+                    ];
+
+                    for (const t of borderT) {
+                        if (t >= 0 && t < closestIntersection) {
+                            closestIntersection = t;
+                        }
+                    }
+
+                    // Save values normalized to [0, 1]
+                    // 1.0 means obstacle is right touching us; 0.0 means completely clear range.
+                    this.sensorValues[i] = 1.0 - (closestIntersection / range);
+                    this.lidarPoints[i] = {
+                        x: this.x + dirX * closestIntersection,
+                        y: this.y + dirY * closestIntersection
+                    };
+                }
+            }
+
+            update() {
+                if (this.dead || this.reached) return;
+
+                this.timeSteps++;
+
+                // 1. Scan obstacles and walls using Lidar raycasts
+                this.castSensors();
+
+                // 2. Scan Target direction (distance, dx, dy)
+                const dx = target.x - this.x;
+                const dy = target.y - this.y;
+                const distance = Math.hypot(dx, dy);
+
+                // Update minimum distance history for fitness scoring
+                if (distance < this.minDistToTarget) {
+                    this.minDistToTarget = distance;
+                }
+
+                // Relative angle to target
+                const angleToTarget = Math.atan2(dy, dx);
+                let diffAngle = angleToTarget - this.angle;
+                
+                // Wrap to [-PI, PI]
+                while (diffAngle < -Math.PI) diffAngle += Math.PI * 2;
+                while (diffAngle > Math.PI) diffAngle -= Math.PI * 2;
+
+                // 3. Assemble inputs for Artificial Neural Network (8 dimensions)
+                // - 5 sensor distances
+                // - Sine of target angle offset
+                // - Cosine of target angle offset
+                // - Current normalized speed
+                const speed = Math.hypot(this.vx, this.vy);
+                const inputs = [
+                    this.sensorValues[0],
+                    this.sensorValues[1],
+                    this.sensorValues[2],
+                    this.sensorValues[3],
+                    this.sensorValues[4],
+                    Math.sin(diffAngle),
+                    Math.cos(diffAngle),
+                    speed / this.maxSpeed
+                ];
+
+                // 4. Brain Feedforward
+                const outputData = this.brain.feedforward(inputs);
+                this.lastHidden = outputData.hidden;
+                this.lastOutputs = outputData.outputs;
+
+                // Output 0 maps to Steering angle [-1, 1] -> steer torque
+                // Output 1 maps to Motor force [-1, 1] -> thrust acceleration
+                const steer = outputData.outputs[0] * this.maxForce;
+                const thrustForce = (outputData.outputs[1] + 1) * 0.5 * 0.35; // range [0, 0.35]
+
+                // 5. Apply forces & physics
+                this.angle += steer;
+                this.vx += Math.cos(this.angle) * thrustForce;
+                this.vy += Math.sin(this.angle) * thrustForce;
+
+                // Apply friction
+                this.vx *= 0.94;
+                this.vy *= 0.94;
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // 6. Collision Checking (Obstacles)
+                for (const obs of obstacles) {
+                    const dist = Math.hypot(this.x - obs.x, this.y - obs.y);
+                    if (dist < this.r + obs.r) {
+                        this.dead = true;
+                        break;
+                    }
+                }
+
+                // Boundary checking
+                if (this.x - this.r < 0 || this.x + this.r > worldCanvas.width ||
+                    this.y - this.r < 0 || this.y + this.r > worldCanvas.height) {
+                    this.dead = true;
+                }
+
+                // Check if target is successfully reached
+                if (distance < target.r) {
+                    this.reached = true;
+                }
+            }
+
+            // Score fitness based on closeness and speed of navigation
+            calculateFitness() {
+                // If crashed early, penalize slightly based on how close it managed to get
+                if (!this.reached) {
+                    // Normalize distance fitness
+                    this.fitness = 1.0 / (this.minDistToTarget + 1.0);
+                } else {
+                    // Reached target get massive baseline + speed bonus
+                    // Faster = higher fitness
+                    const timeBonus = (config.lifetime - this.timeSteps) / config.lifetime;
+                    this.fitness = 15.0 + timeBonus * 8.0;
+                }
+                return this.fitness;
+            }
+
+            draw(isBest = false) {
+                if (this.dead && !isBest) return; // Hide standard dead ants to reduce screen clutter
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+
+                // Draw beautiful styled ant shape
+                if (this.reached) {
+                    ctx.fillStyle = 'rgba(0, 240, 255, 0.9)'; // Cyan glow if success
+                    ctx.shadowColor = 'rgba(0, 240, 255, 0.8)';
+                    ctx.shadowBlur = 10;
+                } else if (this.dead) {
+                    ctx.fillStyle = 'rgba(255, 0, 127, 0.4)'; // Dim red if dead best
+                    ctx.strokeStyle = 'rgba(255, 0, 127, 0.2)';
+                } else {
+                    ctx.fillStyle = isBest ? 'rgba(0, 255, 136, 1)' : 'rgba(0, 255, 136, 0.45)'; // Bright green for best, translucent for rest
+                    if (isBest) {
+                        ctx.shadowColor = 'rgba(0, 255, 136, 0.8)';
+                        ctx.shadowBlur = 12;
+                    }
+                }
+
+                // Glowing Ant Body (Geometric insect styling)
+                ctx.beginPath();
+                // Abdomen
+                ctx.arc(-8, 0, 3, 0, Math.PI*2);
+                // Thorax
+                ctx.arc(-3, 0, 2.5, 0, Math.PI*2);
+                // Head
+                ctx.arc(2, 0, 2.8, 0, Math.PI*2);
+                ctx.fill();
+
+                // Draw small antenna/direction indicator
+                ctx.strokeStyle = ctx.fillStyle;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(3, -1);
+                ctx.lineTo(7, -3);
+                ctx.moveTo(3, 1);
+                ctx.lineTo(7, 3);
+                ctx.stroke();
+
+                ctx.restore();
+
+                // Draw beautiful raycasts for the BEST ant
+                if (isBest && !this.dead && !this.reached) {
+                    ctx.save();
+                    for (let i = 0; i < this.lidarPoints.length; i++) {
+                        const pt = this.lidarPoints[i];
+                        if (!pt) continue;
+
+                        const hitObstacle = this.sensorValues[i] > 0.01;
+
+                        ctx.beginPath();
+                        ctx.moveTo(this.x, this.y);
+                        ctx.lineTo(pt.x, pt.y);
+                        
+                        // Color red if ray hits, else thin blue
+                        ctx.strokeStyle = hitObstacle ? 'rgba(255, 0, 127, 0.5)' : 'rgba(0, 240, 255, 0.15)';
+                        ctx.lineWidth = hitObstacle ? 1.5 : 0.8;
+                        ctx.stroke();
+
+                        // Tiny hit marker circle
+                        if (hitObstacle) {
+                            ctx.beginPath();
+                            ctx.arc(pt.x, pt.y, 3, 0, Math.PI*2);
+                            ctx.fillStyle = 'rgba(255, 0, 127, 0.8)';
+                            ctx.shadowColor = 'rgba(255, 0, 127, 1)';
+                            ctx.shadowBlur = 6;
+                            ctx.fill();
+                        }
+                    }
+                    
+                    // Extra highlight ring
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.r + 6, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(0, 255, 136, 0.4)';
+                    ctx.lineWidth = 1.2;
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
+        }
+
+        //////////////////////////////////////////////////
+        // EVOLUTION / GENETIC ALGORITHM LOGIC
+        //////////////////////////////////////////////////
+        function initPopulation() {
+            ants = [];
+            for (let i = 0; i < config.populationSize; i++) {
+                ants.push(new Ant());
+            }
+            frameCount = 0;
+        }
+
+        function nextGeneration() {
+            // 1. Calculate fitness for all ants
+            let totalFitness = 0;
+            let successCount = 0;
+            let bestAnt = ants[0];
+            let maxFitness = -Infinity;
+
+            for (const ant of ants) {
+                const fit = ant.calculateFitness();
+                totalFitness += fit;
+                if (ant.reached) successCount++;
+                if (fit > maxFitness) {
+                    maxFitness = fit;
+                    bestAnt = ant;
+                }
+            }
+
+            const avgFitness = totalFitness / ants.length;
+            const successRate = successCount / ants.length;
+
+            // 2. Save stats to history
+            history.push({
+                generation: generation,
+                bestFitness: maxFitness,
+                avgFitness: avgFitness,
+                successRate: successRate
+            });
+
+            // 3. Breeding Strategy
+            // Sort ants by fitness descending
+            ants.sort((a, b) => b.fitness - a.fitness);
+
+            let nextGenerationAnts = [];
+
+            // Elitism: 5% best kept exactly
+            const elitismCount = Math.max(1, Math.floor(config.populationSize * 0.06));
+            for (let i = 0; i < elitismCount; i++) {
+                // Reset physical states, but keep brain
+                const elite = ants[i];
+                elite.reset();
+                nextGenerationAnts.push(elite);
+            }
+
+            // Breeding rest using Tournament Selection
+            while (nextGenerationAnts.length < config.populationSize) {
+                const parentA = selectTournament();
+                const parentB = selectTournament();
+
+                // Cross-over
+                let childBrain = parentA.brain.crossover(parentB.brain);
+                
+                // Mutation
+                childBrain.mutate(config.mutationRate);
+
+                nextGenerationAnts.push(new Ant(childBrain));
+            }
+
+            ants = nextGenerationAnts;
+            generation++;
+            frameCount = 0;
+
+            // Redraw trend graph
+            drawChart();
+            updateUI();
+        }
+
+        // Tournament selection
+        function selectTournament() {
+            const tournamentSize = 6;
+            let best = null;
+            for (let i = 0; i < tournamentSize; i++) {
+                const candidate = ants[Math.floor(Math.random() * ants.length)];
+                if (!best || candidate.fitness > best.fitness) {
+                    best = candidate;
+                }
+            }
+            return best;
+        }
+
+        //////////////////////////////////////////////////
+        // PRESETS & OBSTACLES BUILDER
+        //////////////////////////////////////////////////
+        function setPreset(presetName) {
+            obstacles = [];
+            resetPositions();
+            
+            const w = worldCanvas.width;
+            const h = worldCanvas.height;
+
+            if (presetName === 'wall') {
+                // A massive vertical wall blocking direct route with a gap in the center
+                const circleRadius = 24;
+                const spacing = circleRadius * 1.8;
+                const centerX = w / 2;
+                
+                // Make gap in the center vertical area
+                for (let y = circleRadius; y < h; y += spacing) {
+                    if (Math.abs(y - h/2) > 90) {
+                        obstacles.push(new Obstacle(centerX, y, circleRadius));
+                    }
+                }
+            } 
+            else if (presetName === 'gate') {
+                // Double overlapping walls forcing a zig-zag route
+                const circleRadius = 22;
+                const spacing = circleRadius * 1.7;
+                
+                // Wall 1: blocking upper portion
+                const wall1X = w * 0.35;
+                for (let y = 0; y < h * 0.7; y += spacing) {
+                    obstacles.push(new Obstacle(wall1X, y, circleRadius));
+                }
+
+                // Wall 2: blocking lower portion
+                const wall2X = w * 0.65;
+                for (let y = h; y > h * 0.3; y -= spacing) {
+                    obstacles.push(new Obstacle(wall2X, y, circleRadius));
+                }
+            } 
+            else if (presetName === 'maze') {
+                // S-Curve layout
+                const r = 20;
+                const spacing = 32;
+                
+                // Obstacles forming a winding horizontal curve
+                // Upper baffle
+                for (let x = w * 0.25; x < w * 0.55; x += spacing) {
+                    obstacles.push(new Obstacle(x, h * 0.3, r));
+                }
+                
+                // Lower baffle
+                for (let x = w * 0.45; x < w * 0.75; x += spacing) {
+                    obstacles.push(new Obstacle(x, h * 0.7, r));
+                }
+
+                // Small vertical gates
+                for (let y = 0; y < h * 0.3; y += spacing) {
+                    obstacles.push(new Obstacle(w * 0.25, y, r));
+                }
+                for (let y = h; y > h * 0.7; y -= spacing) {
+                    obstacles.push(new Obstacle(w * 0.75, y, r));
+                }
+            } 
+            else if (presetName === 'dynamic') {
+                // Spawns vertical columns of circles that bounce up/down dynamically
+                const r = 24;
+                obstacles.push(new Obstacle(w * 0.3, h * 0.25, r, true, 0, 2.5));
+                obstacles.push(new Obstacle(w * 0.45, h * 0.75, r, true, 0, -2.5));
+                obstacles.push(new Obstacle(w * 0.6, h * 0.3, r, true, 0, 3.2));
+                obstacles.push(new Obstacle(w * 0.75, h * 0.7, r, true, 0, -2.8));
+            }
+
+            // Force restart generation to let ants face the new preset
+            resetTraining();
+        }
+
+        function clearObstacles() {
+            obstacles = [];
+        }
+
+        function resetTraining() {
+            generation = 1;
+            history = [];
+            initPopulation();
+            resetPositions();
+            drawChart();
+            updateUI();
+        }
+
+        //////////////////////////////////////////////////
+        // BRAIN VISUALIZATION RENDERER
+        //////////////////////////////////////////////////
+        // Store visual node coordinates for synapsis particle animation
+        let inputCoords = [];
+        let hiddenCoords = [];
+        let outputCoords = [];
+
+        function initBrainLayout() {
+            inputCoords = [];
+            hiddenCoords = [];
+            outputCoords = [];
+
+            const inputCount = 8;
+            const hiddenCount = 8;
+            const outputCount = 2;
+
+            const padX = 50;
+            const width = brainCanvas.width;
+            const height = brainCanvas.height;
+
+            const xInput = padX;
+            const xHidden = width / 2;
+            const xOutput = width - padX;
+
+            // Inputs
+            const inputSpacing = (height - 30) / (inputCount - 1);
+            for (let i = 0; i < inputCount; i++) {
+                inputCoords.push({ x: xInput, y: 15 + i * inputSpacing });
+            }
+
+            // Hidden
+            const hiddenSpacing = (height - 30) / (hiddenCount - 1);
+            for (let i = 0; i < hiddenCount; i++) {
+                hiddenCoords.push({ x: xHidden, y: 15 + i * hiddenSpacing });
+            }
+
+            // Outputs
+            const outputSpacing = (height - 120) / (outputCount - 1);
+            for (let i = 0; i < outputCount; i++) {
+                outputCoords.push({ x: xOutput, y: height/2 - 20 + i * outputSpacing });
+            }
+        }
+        initBrainLayout();
+
+        // Particle signal logs to draw flows on synapses
+        let brainPulses = []; // { from, to, progress, speed, color }
+
+        function drawBrain(bestAnt) {
+            brainCtx.fillStyle = '#06070a';
+            brainCtx.fillRect(0, 0, brainCanvas.width, brainCanvas.height);
+
+            if (!bestAnt) return;
+
+            const brain = bestAnt.brain;
+
+            // Layer Labels names
+            const inputLabels = ["Lidar L", "Lidar FL", "Lidar C", "Lidar FR", "Lidar R", "Tgt Sin", "Tgt Cos", "Spd"];
+            const outputLabels = ["Kemudi", "Daya"];
+
+            // 1. Draw connecting lines (synapses)
+            // Input to Hidden
+            for (let j = 0; j < brain.hiddenSize; j++) {
+                for (let i = 0; i < brain.inputSize; i++) {
+                    const weight = brain.weightsIH[j][i];
+                    const start = inputCoords[i];
+                    const end = hiddenCoords[j];
+
+                    brainCtx.beginPath();
+                    brainCtx.moveTo(start.x, start.y);
+                    brainCtx.lineTo(end.x, end.y);
+                    
+                    // Cyan if positive weight, Magenta if negative
+                    brainCtx.strokeStyle = weight > 0 ? `rgba(0, 240, 255, ${Math.abs(weight) * 0.45})` : `rgba(255, 0, 127, ${Math.abs(weight) * 0.45})`;
+                    brainCtx.lineWidth = Math.abs(weight) * 2.2;
+                    brainCtx.stroke();
+                }
+            }
+
+            // Hidden to Output
+            for (let k = 0; k < brain.outputSize; k++) {
+                for (let j = 0; j < brain.hiddenSize; j++) {
+                    const weight = brain.weightsHO[k][j];
+                    const start = hiddenCoords[j];
+                    const end = outputCoords[k];
+
+                    brainCtx.beginPath();
+                    brainCtx.moveTo(start.x, start.y);
+                    brainCtx.lineTo(end.x, end.y);
+                    
+                    brainCtx.strokeStyle = weight > 0 ? `rgba(0, 240, 255, ${Math.abs(weight) * 0.45})` : `rgba(255, 0, 127, ${Math.abs(weight) * 0.45})`;
+                    brainCtx.lineWidth = Math.abs(weight) * 2.2;
+                    brainCtx.stroke();
+                }
+            }
+
+            // 2. Animate and draw pulsing signal particles
+            if (frameCount % 6 === 0 && !isPaused) {
+                // Add some random flows along weights
+                const fromIdx = Math.floor(Math.random() * 8);
+                const hiddenIdx = Math.floor(Math.random() * 8);
+                const toIdx = Math.floor(Math.random() * 2);
+
+                const w1 = brain.weightsIH[hiddenIdx][fromIdx];
+                const w2 = brain.weightsHO[toIdx][hiddenIdx];
+
+                if (Math.abs(w1) > 0.3) {
+                    brainPulses.push({
+                        start: inputCoords[fromIdx],
+                        end: hiddenCoords[hiddenIdx],
+                        progress: 0,
+                        speed: 0.05 + Math.random() * 0.03,
+                        color: w1 > 0 ? 'var(--accent-cyan)' : 'var(--accent-magenta)'
+                    });
+                }
+                if (Math.abs(w2) > 0.3) {
+                    brainPulses.push({
+                        start: hiddenCoords[hiddenIdx],
+                        end: outputCoords[toIdx],
+                        progress: 0,
+                        speed: 0.05 + Math.random() * 0.03,
+                        color: w2 > 0 ? 'var(--accent-cyan)' : 'var(--accent-magenta)'
+                    });
+                }
+            }
+
+            // Update and draw particles
+            for (let i = brainPulses.length - 1; i >= 0; i--) {
+                const p = brainPulses[i];
+                p.progress += p.speed;
+
+                if (p.progress >= 1.0) {
+                    brainPulses.splice(i, 1);
+                    continue;
+                }
+
+                const px = p.start.x + (p.end.x - p.start.x) * p.progress;
+                const py = p.start.y + (p.end.y - p.start.y) * p.progress;
+
+                brainCtx.save();
+                brainCtx.beginPath();
+                brainCtx.arc(px, py, 2.5, 0, Math.PI*2);
+                brainCtx.fillStyle = p.color;
+                brainCtx.shadowColor = p.color;
+                brainCtx.shadowBlur = 8;
+                brainCtx.fill();
+                brainCtx.restore();
+            }
+
+            // 3. Draw neuron nodes and active pendaran
+            // Inputs
+            for (let i = 0; i < inputCoords.length; i++) {
+                const pt = inputCoords[i];
+                const act = bestAnt.sensorValues[i] || 0; // sensor value range [0, 1]
+
+                // Glowing green if active
+                brainCtx.save();
+                brainCtx.beginPath();
+                brainCtx.arc(pt.x, pt.y, 6.5, 0, Math.PI*2);
+                brainCtx.fillStyle = `rgba(0, 255, 136, ${0.2 + act * 0.8})`;
+                if (act > 0.3) {
+                    brainCtx.shadowColor = 'rgba(0, 255, 136, 1)';
+                    brainCtx.shadowBlur = 8;
+                }
+                brainCtx.fill();
+                brainCtx.lineWidth = 1.2;
+                brainCtx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                brainCtx.stroke();
+                
+                // Input text labels
+                brainCtx.fillStyle = 'var(--text-muted)';
+                brainCtx.font = '8px Outfit';
+                brainCtx.fillText(inputLabels[i], pt.x - 36, pt.y + 3);
+                brainCtx.restore();
+            }
+
+            // Hidden Nodes
+            for (let i = 0; i < hiddenCoords.length; i++) {
+                const pt = hiddenCoords[i];
+                const act = bestAnt.lastHidden[i] || 0; // range [-1, 1]
+                
+                // Color mapping: cyan for positive, magenta for negative
+                const alpha = Math.abs(act);
+                const colorStr = act > 0 ? `rgba(0, 240, 255, ${0.1 + alpha * 0.9})` : `rgba(255, 0, 127, ${0.1 + alpha * 0.9})`;
+
+                brainCtx.save();
+                brainCtx.beginPath();
+                brainCtx.arc(pt.x, pt.y, 6.5, 0, Math.PI*2);
+                brainCtx.fillStyle = colorStr;
+                if (alpha > 0.35) {
+                    brainCtx.shadowColor = act > 0 ? 'var(--accent-cyan)' : 'var(--accent-magenta)';
+                    brainCtx.shadowBlur = 8;
+                }
+                brainCtx.fill();
+                brainCtx.lineWidth = 1.2;
+                brainCtx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                brainCtx.stroke();
+                brainCtx.restore();
+            }
+
+            // Outputs
+            for (let i = 0; i < outputCoords.length; i++) {
+                const pt = outputCoords[i];
+                const act = bestAnt.lastOutputs[i] || 0; // range [-1, 1]
+                const val = (act + 1.0) / 2.0; // scale to [0, 1] for visual
+
+                brainCtx.save();
+                brainCtx.beginPath();
+                brainCtx.arc(pt.x, pt.y, 8.5, 0, Math.PI*2);
+                brainCtx.fillStyle = `rgba(255, 221, 87, ${0.1 + val * 0.9})`;
+                if (val > 0.5) {
+                    brainCtx.shadowColor = 'var(--accent-yellow)';
+                    brainCtx.shadowBlur = 10;
+                }
+                brainCtx.fill();
+                brainCtx.lineWidth = 1.5;
+                brainCtx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+                brainCtx.stroke();
+
+                // Labels
+                brainCtx.fillStyle = 'var(--text-main)';
+                brainCtx.font = '500 9px Outfit';
+                brainCtx.fillText(outputLabels[i], pt.x + 14, pt.y + 3);
+                brainCtx.restore();
+            }
+        }
+
+        //////////////////////////////////////////////////
+        // PERFORMANCE PROGRESS GRAPH RENDERER
+        //////////////////////////////////////////////////
+        let graphHoverIdx = -1;
+
+        // Custom canvas graph with grids and glow shadow
+        function drawChart() {
+            chartCtx.fillStyle = '#06070a';
+            chartCtx.fillRect(0, 0, chartCanvas.width, chartCanvas.height);
+
+            const padLeft = 45;
+            const padBottom = 25;
+            const padTop = 15;
+            const padRight = 15;
+
+            const drawW = chartCanvas.width - padLeft - padRight;
+            const drawH = chartCanvas.height - padTop - padBottom;
+
+            // Draw axis borders
+            chartCtx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            chartCtx.lineWidth = 1;
+            chartCtx.beginPath();
+            chartCtx.moveTo(padLeft, padTop);
+            chartCtx.lineTo(padLeft, chartCanvas.height - padBottom);
+            chartCtx.lineTo(chartCanvas.width - padRight, chartCanvas.height - padBottom);
+            chartCtx.stroke();
+
+            // Draw clean gridlines (4 vertical, 4 horizontal)
+            chartCtx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+            for (let i = 1; i <= 4; i++) {
+                const y = padTop + (drawH / 4) * i;
+                chartCtx.beginPath();
+                chartCtx.moveTo(padLeft, y);
+                chartCtx.lineTo(chartCanvas.width - padRight, y);
+                chartCtx.stroke();
+
+                const x = padLeft + (drawW / 4) * i;
+                chartCtx.beginPath();
+                chartCtx.moveTo(x, padTop);
+                chartCtx.lineTo(x, chartCanvas.height - padBottom);
+                chartCtx.stroke();
+            }
+
+            if (history.length === 0) {
+                // Empty state text
+                chartCtx.fillStyle = 'var(--text-muted)';
+                chartCtx.font = '12px Outfit';
+                chartCtx.textAlign = 'center';
+                chartCtx.fillText("Menunggu Data Generasi...", chartCanvas.width / 2, chartCanvas.height / 2);
+                return;
+            }
+
+            // Find scale bounds
+            // Success rate is always 0 to 1
+            // Let's find max fitness to scale fitness line y axis properly
+            let maxFitInHistory = 0.0001;
+            for (const h of history) {
+                if (h.bestFitness > maxFitInHistory) maxFitInHistory = h.bestFitness;
+            }
+
+            // Draw axes labels (Y Axis)
+            chartCtx.fillStyle = 'var(--text-muted)';
+            chartCtx.font = '9px Outfit';
+            chartCtx.textAlign = 'right';
+            chartCtx.fillText("23.0 (Fit)", padLeft - 6, padTop + 8);
+            chartCtx.fillText("100% (SR)", padLeft - 6, padTop + 18);
+            chartCtx.fillText("0.0", padLeft - 6, chartCanvas.height - padBottom + 2);
+
+            // Generasi label on X axis
+            chartCtx.textAlign = 'center';
+            chartCtx.fillText("G: 1", padLeft, chartCanvas.height - padBottom + 12);
+            if (history.length > 1) {
+                chartCtx.fillText("G: " + history.length, chartCanvas.width - padRight, chartCanvas.height - padBottom + 12);
+            }
+
+            // Draw line helper mapping
+            function getCoords(index, fitnessVal, isSuccessRate = false) {
+                const x = padLeft + (index / Math.max(1, history.length - 1)) * drawW;
+                
+                // Success rate scaling (0 to 1)
+                // Fitness scaling (0 to 23.0 - which is maximum possible ant fitness 15.0 + 8.0)
+                let yVal = 0;
+                if (isSuccessRate) {
+                    yVal = fitnessVal;
+                } else {
+                    yVal = fitnessVal / 23.0; // scaled relative to max potential
+                }
+                const y = chartCanvas.height - padBottom - yVal * drawH;
+                return { x, y };
+            }
+
+            // 1. Draw Success Rate Curve (Magenta Line & Glow)
+            chartCtx.save();
+            chartCtx.beginPath();
+            for (let i = 0; i < history.length; i++) {
+                const pt = getCoords(i, history[i].successRate, true);
+                if (i === 0) chartCtx.moveTo(pt.x, pt.y);
+                else chartCtx.lineTo(pt.x, pt.y);
+            }
+            chartCtx.strokeStyle = 'var(--accent-magenta)';
+            chartCtx.lineWidth = 2.5;
+            chartCtx.shadowColor = 'var(--accent-magenta)';
+            chartCtx.shadowBlur = 6;
+            chartCtx.stroke();
+            chartCtx.restore();
+
+            // Fill area below Success Rate with transparent magenta gradient
+            if (history.length > 0) {
+                chartCtx.beginPath();
+                const startPt = getCoords(0, 0, true);
+                chartCtx.moveTo(startPt.x, chartCanvas.height - padBottom);
+                for (let i = 0; i < history.length; i++) {
+                    const pt = getCoords(i, history[i].successRate, true);
+                    chartCtx.lineTo(pt.x, pt.y);
+                }
+                chartCtx.lineTo(chartCanvas.width - padRight, chartCanvas.height - padBottom);
+                chartCtx.closePath();
+                let fillGrad = chartCtx.createLinearGradient(0, padTop, 0, chartCanvas.height - padBottom);
+                fillGrad.addColorStop(0, 'rgba(255, 0, 127, 0.08)');
+                fillGrad.addColorStop(1, 'rgba(255, 0, 127, 0)');
+                chartCtx.fillStyle = fillGrad;
+                chartCtx.fill();
+            }
+
+            // 2. Draw Best Fitness Curve (Cyan Line & Glow)
+            chartCtx.save();
+            chartCtx.beginPath();
+            for (let i = 0; i < history.length; i++) {
+                const pt = getCoords(i, history[i].bestFitness, false);
+                if (i === 0) chartCtx.moveTo(pt.x, pt.y);
+                else chartCtx.lineTo(pt.x, pt.y);
+            }
+            chartCtx.strokeStyle = 'var(--accent-cyan)';
+            chartCtx.lineWidth = 2.5;
+            chartCtx.shadowColor = 'var(--accent-cyan)';
+            chartCtx.shadowBlur = 6;
+            chartCtx.stroke();
+            chartCtx.restore();
+
+            // 3. Draw Average Fitness Curve (Yellow Dashed Line)
+            chartCtx.save();
+            chartCtx.beginPath();
+            chartCtx.setLineDash([4, 4]);
+            for (let i = 0; i < history.length; i++) {
+                const pt = getCoords(i, history[i].avgFitness, false);
+                if (i === 0) chartCtx.moveTo(pt.x, pt.y);
+                else chartCtx.lineTo(pt.x, pt.y);
+            }
+            chartCtx.strokeStyle = 'var(--accent-yellow)';
+            chartCtx.lineWidth = 1.5;
+            chartCtx.stroke();
+            chartCtx.restore();
+
+            // 4. Draw Hover Vertical Marker & Tooltip
+            if (graphHoverIdx >= 0 && graphHoverIdx < history.length) {
+                const hoverPt = getCoords(graphHoverIdx, history[graphHoverIdx].bestFitness, false);
+                
+                // Draw vertical line
+                chartCtx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                chartCtx.lineWidth = 1;
+                chartCtx.beginPath();
+                chartCtx.moveTo(hoverPt.x, padTop);
+                chartCtx.lineTo(hoverPt.x, chartCanvas.height - padBottom);
+                chartCtx.stroke();
+
+                // Draw dots on lines
+                const dotSR = getCoords(graphHoverIdx, history[graphHoverIdx].successRate, true);
+                const dotBF = getCoords(graphHoverIdx, history[graphHoverIdx].bestFitness, false);
+                const dotAF = getCoords(graphHoverIdx, history[graphHoverIdx].avgFitness, false);
+
+                function drawHoverDot(pt, color) {
+                    chartCtx.beginPath();
+                    chartCtx.arc(pt.x, pt.y, 4, 0, Math.PI*2);
+                    chartCtx.fillStyle = color;
+                    chartCtx.fill();
+                    chartCtx.strokeStyle = '#fff';
+                    chartCtx.lineWidth = 1;
+                    chartCtx.stroke();
+                }
+                drawHoverDot(dotSR, 'var(--accent-magenta)');
+                drawHoverDot(dotBF, 'var(--accent-cyan)');
+                drawHoverDot(dotAF, 'var(--accent-yellow)');
+
+                // Draw elegant floating box tooltip info
+                const tWidth = 110;
+                const tHeight = 55;
+                let tx = hoverPt.x + 8;
+                let ty = hoverPt.y - 25;
+
+                // Bound checking for tooltip to stay inside chart
+                if (tx + tWidth > chartCanvas.width) {
+                    tx = hoverPt.x - tWidth - 8;
+                }
+                if (ty < padTop) ty = padTop;
+                if (ty + tHeight > chartCanvas.height - padBottom) ty = chartCanvas.height - padBottom - tHeight;
+
+                chartCtx.fillStyle = 'rgba(10, 11, 16, 0.95)';
+                chartCtx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+                chartCtx.lineWidth = 1.2;
+                chartCtx.beginPath();
+                if (chartCtx.roundRect) {
+                    chartCtx.roundRect(tx, ty, tWidth, tHeight, 6);
+                } else {
+                    chartCtx.rect(tx, ty, tWidth, tHeight);
+                }
+                chartCtx.fill();
+                chartCtx.stroke();
+
+                chartCtx.fillStyle = '#fff';
+                chartCtx.font = '700 8.5px Outfit';
+                chartCtx.textAlign = 'left';
+                chartCtx.fillText(`Generasi: ${history[graphHoverIdx].generation}`, tx + 6, ty + 12);
+                
+                chartCtx.fillStyle = 'var(--accent-cyan)';
+                chartCtx.font = '8px Outfit';
+                chartCtx.fillText(`Best Fit: ${history[graphHoverIdx].bestFitness.toFixed(4)}`, tx + 6, ty + 24);
+                
+                chartCtx.fillStyle = 'var(--accent-yellow)';
+                chartCtx.fillText(`Avg Fit: ${history[graphHoverIdx].avgFitness.toFixed(4)}`, tx + 6, ty + 34);
+                
+                chartCtx.fillStyle = 'var(--accent-magenta)';
+                chartCtx.fillText(`Success: ${(history[graphHoverIdx].successRate * 100).toFixed(0)}%`, tx + 6, ty + 44);
+            }
+        }
+
+        // Track chart mouse moves for hovering tooltip
+        chartCanvas.addEventListener('mousemove', (e) => {
+            if (history.length === 0) return;
+
+            const rect = chartCanvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+
+            const padLeft = 45;
+            const padRight = 15;
+            const drawW = chartCanvas.width - padLeft - padRight;
+
+            // Calculate hovered index based on local mouse position
+            if (mouseX >= padLeft && mouseX <= chartCanvas.width - padRight) {
+                const fraction = (mouseX - padLeft) / drawW;
+                graphHoverIdx = Math.round(fraction * (history.length - 1));
+            } else {
+                graphHoverIdx = -1;
+            }
+            drawChart();
+        });
+
+        chartCanvas.addEventListener('mouseleave', () => {
+            graphHoverIdx = -1;
+            drawChart();
+        });
+
+        //////////////////////////////////////////////////
+        // SIMULATION MAIN ENGINE LOOP
+        //////////////////////////////////////////////////
+        initPopulation();
+
+        function updateSimulation() {
+            frameCount++;
+
+            // Update obstacles positions (if dynamic preset is selected)
+            for (const obs of obstacles) {
+                obs.update();
+            }
+
+            // Update all ants physics
+            for (const ant of ants) {
+                ant.update();
+            }
+
+            // Check if all ants have died or successfully navigated to the target
+            let allFinished = true;
+            for (const ant of ants) {
+                if (!ant.dead && !ant.reached) {
+                    allFinished = false;
+                    break;
+                }
+            }
+
+            // Evolve to next generation early if all finished
+            if (frameCount >= config.lifetime || allFinished) {
+                nextGeneration();
+            }
+        }
+
+        function drawSimulation() {
+            // Draw clean background
+            ctx.fillStyle = '#08090c';
+            ctx.fillRect(0, 0, worldCanvas.width, worldCanvas.height);
+
+            // Draw premium engineering gridlines in background
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+            ctx.lineWidth = 1;
+            const gridSize = 40;
+            for (let x = 0; x < worldCanvas.width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, worldCanvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < worldCanvas.height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(worldCanvas.width, y);
+                ctx.stroke();
+            }
+
+            // Find current best alive ant to draw its rays and highlight
+            // We sort a copy so we don't disrupt the index array
+            let sortedAnts = [...ants];
+            
+            // Sort to find best ant
+            // Prioritize reached, then closest distance
+            sortedAnts.sort((a, b) => {
+                if (a.reached && !b.reached) return -1;
+                if (!a.reached && b.reached) return 1;
+                return a.minDistToTarget - b.minDistToTarget;
+            });
+            const bestAnt = sortedAnts[0];
+
+            // Draw Obstacles
+            for (const obs of obstacles) {
+                obs.draw();
+            }
+
+            // Draw Spawn Point Circle
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(startPoint.x, startPoint.y, 14, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.setLineDash([3, 3]);
+            ctx.lineWidth = 1.5;
+            ctx.fill();
+            ctx.stroke();
+            
+            ctx.fillStyle = 'rgba(255,255,255,0.4)';
+            ctx.font = '8px Outfit';
+            ctx.textAlign = 'center';
+            ctx.fillText("SPAWN", startPoint.x, startPoint.y - 18);
+            ctx.restore();
+
+            // Draw Draggable Target (Neon Glowing style)
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(target.x, target.y, target.r, 0, Math.PI * 2);
+            let targetGrad = ctx.createRadialGradient(target.x, target.y, 2, target.x, target.y, target.r);
+            targetGrad.addColorStop(0, 'rgba(0, 240, 255, 0.45)');
+            targetGrad.addColorStop(0.5, 'rgba(0, 240, 255, 0.15)');
+            targetGrad.addColorStop(1, 'rgba(0, 240, 255, 0.03)');
+            ctx.fillStyle = targetGrad;
+            ctx.fill();
+            
+            // Outer pulse circle
+            ctx.beginPath();
+            ctx.arc(target.x, target.y, target.r - 2, 0, Math.PI * 2);
+            ctx.strokeStyle = 'var(--accent-cyan)';
+            ctx.lineWidth = 2;
+            ctx.shadowColor = 'var(--accent-cyan)';
+            ctx.shadowBlur = 15;
+            ctx.stroke();
+
+            // Draw crosshair lines inside target
+            ctx.beginPath();
+            ctx.moveTo(target.x - 6, target.y);
+            ctx.lineTo(target.x + 6, target.y);
+            ctx.moveTo(target.x, target.y - 6);
+            ctx.lineTo(target.x, target.y + 6);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            
+            ctx.fillStyle = 'var(--accent-cyan)';
+            ctx.font = 'bold 9px Outfit';
+            ctx.textAlign = 'center';
+            ctx.shadowBlur = 0;
+            ctx.fillText("TARGET", target.x, target.y + target.r + 14);
+            ctx.restore();
+
+            // Draw Ants (draw best ant last so it sits on top)
+            for (const ant of ants) {
+                if (ant !== bestAnt) {
+                    ant.draw(false);
+                }
+            }
+            if (bestAnt) {
+                bestAnt.draw(true);
+            }
+
+            // Draw Active Brain of the best ant
+            drawBrain(bestAnt);
+        }
+
+        // Main browser animation frame loop
+        function animate() {
+            if (!isPaused) {
+                // Speed accelerator loops physics updates multiple times per drawing tick
+                for (let i = 0; i < config.speedMultiplier; i++) {
+                    updateSimulation();
+                }
+            }
+
+            drawSimulation();
+            
+            // Stats panel updates
+            if (frameCount % 3 === 0) {
+                updateUIStatsOnly();
+            }
+
+            requestAnimationFrame(animate);
+        }
+        requestAnimationFrame(animate);
+
+        //////////////////////////////////////////////////
+        // INTERACTIVE MOUSE / TOUCH HANDLING
+        //////////////////////////////////////////////////
+        let isMouseDown = false;
+        let isDraggingTarget = false;
+        let lastPlacementCoords = { x: 0, y: 0 };
+        const brushIndicator = document.getElementById("brush-indicator");
+
+        function getMousePos(e) {
+            const rect = worldCanvas.getBoundingClientRect();
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        }
+
+        worldCanvas.addEventListener('mousedown', (e) => {
+            const pos = getMousePos(e);
+
+            // Check if clicking target to drag it
+            const distToTarget = Math.hypot(pos.x - target.x, pos.y - target.y);
+            if (distToTarget < target.r + 10) {
+                isDraggingTarget = true;
+                return;
+            }
+
+            isMouseDown = true;
+            lastPlacementCoords = pos;
+
+            // Handle immediate click operations
+            handleDrawingBrush(pos, e.button === 2 || e.ctrlKey || mouseMode === 'erase');
+        });
+
+        worldCanvas.addEventListener('mousemove', (e) => {
+            const pos = getMousePos(e);
+
+            // 1. Drag target logic
+            if (isDraggingTarget) {
+                target.x = Math.max(30, Math.min(worldCanvas.width - 30, pos.x));
+                target.y = Math.max(30, Math.min(worldCanvas.height - 30, pos.y));
+                return;
+            }
+
+            // 2. Brush cursor indicator
+            brushIndicator.style.display = 'block';
+            brushIndicator.style.left = e.clientX + 'px';
+            brushIndicator.style.top = e.clientY + 'px';
+            brushIndicator.style.width = (brushSize * 2) + 'px';
+            brushIndicator.style.height = (brushSize * 2) + 'px';
+
+            // 3. Draw or Erase obstacles on mouse drag
+            if (isMouseDown) {
+                const distMoved = Math.hypot(pos.x - lastPlacementCoords.x, pos.y - lastPlacementCoords.y);
+                const isErase = e.buttons === 2 || e.ctrlKey || mouseMode === 'erase';
+
+                // Prevent piling circles overlapping on single spot
+                if (isErase || distMoved > brushSize / 2.2) {
+                    handleDrawingBrush(pos, isErase);
+                    lastPlacementCoords = pos;
+                }
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            isMouseDown = false;
+            isDraggingTarget = false;
+        });
+
+        worldCanvas.addEventListener('mouseleave', () => {
+            brushIndicator.style.display = 'none';
+        });
+
+        // Block context menu so right-click is naturally used for eraser
+        worldCanvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+
+        function handleDrawingBrush(pos, isErase) {
+            if (isErase) {
+                // Erase mode: deletes obstacles touched by brush range
+                for (let i = obstacles.length - 1; i >= 0; i--) {
+                    const obs = obstacles[i];
+                    const dist = Math.hypot(pos.x - obs.x, pos.y - obs.y);
+                    if (dist < obs.r + brushSize) {
+                        obstacles.splice(i, 1);
+                    }
+                }
+            } else {
+                // Draw mode: adds new frosted obstacle
+                // Avoid drawing right over spawn point or target to prevent stuck semut
+                const distToSpawn = Math.hypot(pos.x - startPoint.x, pos.y - startPoint.y);
+                const distToTarget = Math.hypot(pos.x - target.x, pos.y - target.y);
+                
+                if (distToSpawn > brushSize + 15 && distToTarget > target.r + brushSize + 5) {
+                    obstacles.push(new Obstacle(pos.x, pos.y, brushSize));
+                }
+            }
+        }
+
+        //////////////////////////////////////////////////
+        // UI AND PARAMETERS CONTROLS EVENT HANDLERS
+        //////////////////////////////////////////////////
+        const btnPlayPause = document.getElementById("btn-play-pause");
+        const btnReset = document.getElementById("btn-reset");
+        const btnModeDraw = document.getElementById("btn-mode-draw");
+        const btnModeErase = document.getElementById("btn-mode-erase");
+        
+        const sliderSpeed = document.getElementById("slider-speed");
+        const valSpeed = document.getElementById("speed-val");
+        const sliderBrush = document.getElementById("slider-brush");
+        const valBrush = document.getElementById("brush-val");
+
+        const sliderPop = document.getElementById("slider-pop");
+        const valPop = document.getElementById("pop-val");
+        const sliderMutate = document.getElementById("slider-mutate");
+        const valMutate = document.getElementById("mutate-val");
+        const sliderSensor = document.getElementById("slider-sensor");
+        const valSensor = document.getElementById("sensor-val");
+
+        // Stats elements
+        const statGen = document.getElementById("stat-gen");
+        const statFrame = document.getElementById("stat-frame");
+        const statBestFit = document.getElementById("stat-best-fit");
+        const statSuccess = document.getElementById("stat-success");
+
+        // Play Pause toggle
+        btnPlayPause.onclick = () => {
+            isPaused = !isPaused;
+            if (isPaused) {
+                btnPlayPause.classList.remove("primary");
+                btnPlayPause.innerHTML = `
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                    <span>Play</span>`;
+            } else {
+                btnPlayPause.classList.add("primary");
+                btnPlayPause.innerHTML = `
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                    <span>Pause</span>`;
+            }
+        };
+
+        btnReset.onclick = () => {
+            resetTraining();
+        };
+
+        // Draw / Erase Brush modes
+        btnModeDraw.onclick = () => {
+            mouseMode = 'draw';
+            btnModeDraw.classList.add("active-mode");
+            btnModeErase.classList.remove("active-mode");
+            brushIndicator.style.borderColor = 'var(--accent-cyan)';
+        };
+
+        btnModeErase.onclick = () => {
+            mouseMode = 'erase';
+            btnModeErase.classList.add("active-mode");
+            btnModeDraw.classList.remove("active-mode");
+            brushIndicator.style.borderColor = 'var(--accent-magenta)';
+        };
+
+        // Slider Speeds mapping
+        sliderSpeed.oninput = () => {
+            const val = parseInt(sliderSpeed.value);
+            config.speedMultiplier = val;
+            if (val === 1) {
+                valSpeed.textContent = "1x (Normal)";
+            } else if (val === 10) {
+                valSpeed.textContent = "25x (Super Cepat)";
+                config.speedMultiplier = 25; // Boost speed even more!
+            } else {
+                valSpeed.textContent = `${val}x (Cepat)`;
+            }
+        };
+
+        // Brush size slider
+        sliderBrush.oninput = () => {
+            brushSize = parseInt(sliderBrush.value);
+            valBrush.textContent = brushSize + "px";
+        };
+
+        // Population Slider
+        sliderPop.onchange = () => {
+            config.populationSize = parseInt(sliderPop.value);
+            valPop.textContent = `${config.populationSize} Semut`;
+            resetTraining(); // Population size change forces reset
+        };
+        sliderPop.oninput = () => {
+            valPop.textContent = `${sliderPop.value} Semut`;
+        };
+
+        // Mutation Slider
+        sliderMutate.oninput = () => {
+            const val = parseInt(sliderMutate.value);
+            config.mutationRate = val / 100;
+            valMutate.textContent = val + "%";
+        };
+
+        // Sensor Range Slider
+        sliderSensor.oninput = () => {
+            config.sensorRange = parseInt(sliderSensor.value);
+            valSensor.textContent = config.sensorRange + "px";
+        };
+
+        // Stats Updates
+        function updateUIStatsOnly() {
+            statFrame.textContent = `${frameCount} / ${config.lifetime}`;
+            
+            // Get best ant fitness currently
+            if (ants.length > 0) {
+                let currentMax = -Infinity;
+                let successCount = 0;
+                for (const ant of ants) {
+                    const tempFit = ant.reached ? 15.0 : 1.0 / (ant.minDistToTarget + 1.0);
+                    if (tempFit > currentMax) currentMax = tempFit;
+                    if (ant.reached) successCount++;
+                }
+                statBestFit.textContent = currentMax.toFixed(4);
+                statSuccess.textContent = ((successCount / ants.length) * 100).toFixed(0) + "%";
+            }
+        }
+
+        function updateUI() {
+            statGen.textContent = generation;
+            updateUIStatsOnly();
+        }
+
+        // Windows Resize listener
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            resetPositions();
+        });
+
+    </script>
+</body>
+</html>
